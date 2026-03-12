@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  feed_manager:
+    build: .
+    command: python -m feed_manager.main
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health/feed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  brain:
+    build: .
+    command: python -m brain.main
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./rules:/app/rules
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - feed_manager
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health/brain')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  actuator:
+    build: .
+    command: python -m actuator.main
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./wallet:/app/wallet
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8002/health/actuator')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  monitor:
+    build: .
+    command: python -m monitor.main
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8003/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
