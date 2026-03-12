@@ -1,0 +1,2 @@
+# curiosity--mission--forge--hermes-1----low-latency-local-trading-agent
+Architect a minimalist, self-contained trading agent on local Python, using our own market data feeds. Its sole purpose: exploit micro-inefficiencies on a single DEX pair (e.g., AERO) with sub-100ms decision loops. Profit target: $5/day. This is the prototype core of the Autonomy Engine's economic limb—a proof of concept for closed-loop action/prof
